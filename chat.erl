@@ -5,7 +5,7 @@
 
 %% Starts a chat server listening for incoming connections on the given Port.
 accept(Port) ->
-    {ok, Socket} = gen_tcp:listen(Port, [binary, {active, true}, {packet, line}, {reuseaddr, true}]),
+    {ok, Socket} = gen_tcp:listen(Port, [list, {active, true}, {packet, line}, {reuseaddr, true}]),
     io:format("Chat server listening on port ~p~n", [Port]),
     Chat = spawn(fun () -> chat_loop([]) end),
     server_loop(Socket, Chat).
@@ -47,6 +47,10 @@ server_loop(Socket, Chat) ->
 %% connected socket.
 client_loop(Connection, Chat) ->
     receive
+        {tcp, Connection, ".quit\r\n"} ->
+            io:format("Closing connection due to user quitting~n"),
+            gen_tcp:close(Connection),
+            Chat ! {remove, self()};
         {tcp, Connection, Data} ->
             Chat ! {message, self(), Data},
             client_loop(Connection, Chat);
